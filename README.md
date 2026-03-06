@@ -2,6 +2,10 @@
 
 A collection of skills for writing IronPython 2.7 scripts in Rhino Grasshopper.
 
+> **Verified for Rhinoceros 7** (RhinoCommon 7.x SDK + Grasshopper 1).
+> Rhino 8 users: the IronPython 2.7 layer still exists in Rhino 8, so the skills remain valid for
+> legacy GH Python nodes, but Rhino 8 also supports CPython 3 where the syntax constraints differ.
+
 Each skill is a self-contained Markdown file with a YAML frontmatter header (`name`, `description`) followed by reference material and patterns. Skills can be used with any AI agent or tool that supports skill/context injection.
 
 <img width="2003" height="1534" alt="image" src="https://github.com/user-attachments/assets/7a026c61-260d-4bdf-9453-6cb4a87c2f23" />

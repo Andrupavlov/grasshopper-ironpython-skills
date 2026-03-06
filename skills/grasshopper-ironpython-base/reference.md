@@ -375,7 +375,7 @@ rc, crvs, pts = Intersection.BrepBrep(brep_a, brep_b, tolerance)   # crvs=Curve[
 
 events = Intersection.CurveCurve(crv_a, crv_b, tol, overlap_tol)
 
-pts = Intersection.MeshMeshFast(mesh_a, mesh_b)   # returns Point3d[] of intersection points
+polylines = Intersection.MeshMeshFast(mesh_a, mesh_b)   # returns Polyline[] (intersection curves)
 ```
 
 ## BoundingBox

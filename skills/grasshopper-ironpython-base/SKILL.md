@@ -1,9 +1,16 @@
 ---
 name: grasshopper-ironpython-base
 description: Write IronPython 2.7 scripts for Rhino Grasshopper components. Covers syntax constraints, Rhino.Geometry and Grasshopper APIs, DataTree operations, sc.sticky state, error handling, and component structure. Use when creating or editing .py files in the Gh/ directory, writing Grasshopper Python nodes, or working with Rhino geometry.
+rhino_version: "7"
 ---
 
 # Grasshopper IronPython 2.7
+
+> **Target platform:** Rhinoceros 7 + Grasshopper 1 with the built-in IronPython 2.7 interpreter.
+> All API signatures, return types, and method names in this skill are verified against the
+> [RhinoCommon 7.x SDK](https://developer.rhino3d.com/api/rhinocommon/?version=7.x).
+> Rhino 8 ships with **both** IronPython 2.7 (legacy) and CPython 3 — if you are targeting Rhino 8
+> CPython, many constraints in the Hard Constraints section do not apply.
 
 ## Hard Constraints (IronPython 2.7)
 
