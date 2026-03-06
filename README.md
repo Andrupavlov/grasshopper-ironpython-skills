@@ -4,6 +4,8 @@ A collection of skills for writing IronPython 2.7 scripts in Rhino Grasshopper.
 
 Each skill is a self-contained Markdown file with a YAML frontmatter header (`name`, `description`) followed by reference material and patterns. Skills can be used with any AI agent or tool that supports skill/context injection.
 
+<img width="2003" height="1534" alt="image" src="https://github.com/user-attachments/assets/7a026c61-260d-4bdf-9453-6cb4a87c2f23" />
+
 ## Skills
 
 | Skill | Path | Description |
