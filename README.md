@@ -40,7 +40,9 @@ Each skill folder contains:
 
 ## How to use
 
-Copy the skill folder into your project alongside your agent configuration:
+### Option 1 — Copy manually
+
+Download or copy the skill folder into your project:
 
 ```
 your-project/
@@ -51,7 +53,40 @@ your-project/
         └── reference.md
 ```
 
-Or clone/submodule this repo and point your agent config at the relevant `SKILL.md`.
+### Option 2 — Git clone
+
+Clone the whole collection and reference the skill you need:
+
+```bash
+git clone https://github.com/Andrupavlov/grasshopper-ironpython-skills.git
+```
+
+### Option 3 — Git submodule
+
+Add as a submodule to keep skills in sync with upstream:
+
+```bash
+git submodule add https://github.com/Andrupavlov/grasshopper-ironpython-skills.git skills
+git submodule update --init
+```
+
+To update later:
+
+```bash
+git submodule update --remote
+```
+
+### Option 4 — Sparse checkout (single skill only)
+
+Pull only one skill folder without the full repo:
+
+```bash
+git clone --no-checkout --depth=1 https://github.com/Andrupavlov/grasshopper-ironpython-skills.git
+cd grasshopper-ironpython-skills
+git sparse-checkout init --cone
+git sparse-checkout set skills/grasshopper-ironpython-base
+git checkout
+```
 
 ## License
 
