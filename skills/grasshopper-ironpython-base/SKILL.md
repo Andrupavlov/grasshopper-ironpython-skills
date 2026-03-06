@@ -1,5 +1,5 @@
 ---
-name: grasshopper-ironpython
+name: grasshopper-ironpython-base
 description: Write IronPython 2.7 scripts for Rhino Grasshopper components. Covers syntax constraints, Rhino.Geometry and Grasshopper APIs, DataTree operations, sc.sticky state, error handling, and component structure. Use when creating or editing .py files in the Gh/ directory, writing Grasshopper Python nodes, or working with Rhino geometry.
 ---
 

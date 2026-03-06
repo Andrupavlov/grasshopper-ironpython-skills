@@ -1,50 +1,58 @@
-# grasshopper-ironpython
+# grasshopper-ironpython-skills
 
-A Claude Code skill for writing IronPython 2.7 scripts in Rhino Grasshopper.
+A collection of skills for writing IronPython 2.7 scripts in Rhino Grasshopper.
 
-## What this skill covers
+Each skill is a self-contained Markdown file with a YAML frontmatter header (`name`, `description`) followed by reference material and patterns. Skills can be used with any AI agent or tool that supports skill/context injection.
 
-- **IronPython 2.7 constraints** — forbidden syntax, safe alternatives, quirks
+## Skills
+
+| Skill | Path | Description |
+|-------|------|-------------|
+| `grasshopper-ironpython-base` | `skills/grasshopper-ironpython-base/` | Core constraints, component structure, DataTree, API reference |
+
+More skills coming.
+
+## Structure
+
+```
+grasshopper-ironpython-skills/
+└── skills/
+    └── grasshopper-ironpython-base/
+        ├── SKILL.md       ← main skill definition
+        ├── examples.md    ← 5 component templates
+        └── reference.md   ← Rhino.Geometry + GH API reference
+```
+
+Each skill folder contains:
+- `SKILL.md` — frontmatter + instructions/reference for the AI
+- supporting files referenced from `SKILL.md` (examples, API docs, etc.)
+
+## What `grasshopper-ironpython-base` covers
+
+- **IronPython 2.7 constraints** — forbidden syntax, safe alternatives
 - **Component file structure** — docstring format, import order, entry point pattern
 - **Rhino.Geometry API** — Point3d, Vector3d, Line, Plane, BoundingBox, Brep, transforms, intersections
 - **Grasshopper DataTree** — creation, iteration, typed generics, path operations
-- **Input validation** — safe globals() checks, NameError-safe patterns
+- **Input validation** — safe `globals()` checks, NameError-safe patterns
 - **sc.sticky** — persistent state between recalculations
-- **Error reporting** — runtime messages, component status, ExpireSolution
+- **Error reporting** — runtime messages, component status, `ExpireSolution`
 - **Style rules** — naming conventions, anti-patterns
-
-## Files
-
-| File | Contents |
-|------|----------|
-| `SKILL.md` | Main skill definition — constraints, patterns, style rules |
-| `reference.md` | Rhino.Geometry and Grasshopper API quick reference |
-| `examples.md` | 5 ready-to-use component templates |
 
 ## How to use
 
-### Option A — copy into your project
+Copy the skill folder into your project alongside your agent configuration:
 
 ```
 your-project/
-└── .agents/
-    └── skills/
-        └── grasshopper-ironpython/
-            ├── SKILL.md
-            ├── examples.md
-            └── reference.md
+└── skills/
+    └── grasshopper-ironpython-base/
+        ├── SKILL.md
+        ├── examples.md
+        └── reference.md
 ```
 
-### Option B — reference in CLAUDE.md
+Or clone/submodule this repo and point your agent config at the relevant `SKILL.md`.
 
-```markdown
-# CLAUDE.md
-See skill: grasshopper-ironpython
-Skill path: .agents/skills/grasshopper-ironpython/SKILL.md
-```
+## License
 
-### Option C — install via skills CLI
-
-```bash
-npx skills install grasshopper-ironpython
-```
+MIT
