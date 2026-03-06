@@ -25,10 +25,11 @@ ok = False
 result = []
 count = 0
 
-if 'enabled' not in globals() or enabled is None:
-    enabled = True
-if 'data_in' not in globals() or data_in is None:
+# Input 0 = data_in, Input 1 = enabled (SourceCount = Grasshopper API)
+if ghenv.Component.Params.Input[0].SourceCount == 0:
     data_in = []
+if ghenv.Component.Params.Input[1].SourceCount == 0:
+    enabled = True
 
 try:
     if not data_in:
@@ -77,8 +78,11 @@ groups = gh.DataTree[rg.Point3d]()
 centroids = []
 debug = []
 
-if 'tolerance' not in globals() or tolerance is None:
+# Input 0 = points, Input 1 = tolerance (SourceCount = Grasshopper API)
+if ghenv.Component.Params.Input[1].SourceCount == 0:
     tolerance = DEFAULT_TOLERANCE
+if ghenv.Component.Params.Input[0].SourceCount == 0:
+    points = []
 
 def find_group(point, group_centers, tol):
     """Find which group a point belongs to, or -1 if none"""
@@ -156,9 +160,10 @@ STICKY_PREFIX = "accumulator_"
 stored = []
 count = 0
 
-if 'key' not in globals() or key is None:
+# Input 0 = value, Input 1 = key, Input 2 = reset (SourceCount = Grasshopper API)
+if ghenv.Component.Params.Input[1].SourceCount == 0:
     key = "default"
-if 'value' not in globals():
+if ghenv.Component.Params.Input[0].SourceCount == 0:
     value = None
 
 def get_sticky_key(user_key):
@@ -167,7 +172,7 @@ def get_sticky_key(user_key):
 
 try:
     k = get_sticky_key(key)
-    reset_flag = bool(reset) if 'reset' in globals() and reset else False
+    reset_flag = bool(reset) if ghenv.Component.Params.Input[2].SourceCount > 0 and reset else False
 
     if reset_flag:
         sc.sticky[k] = []
@@ -240,6 +245,12 @@ class ConnectionProcessor(object):
 result = gh.DataTree[System.String]()
 debug = []
 
+# Input 0 = connections, Input 1 = panels (SourceCount = Grasshopper API)
+if ghenv.Component.Params.Input[0].SourceCount == 0:
+    connections = None
+if ghenv.Component.Params.Input[1].SourceCount == 0:
+    panels = []
+
 try:
     processor = ConnectionProcessor(panels)
 
@@ -250,9 +261,13 @@ try:
             result.AddRange(processed, path)
 
     debug = processor.debug
-    n_branches = (getattr(connections, "BranchCount", None)
-                  if connections is not None else 0) or 0
-    debug.append("Processed {} branches".format(n_branches))
+    n_branches = 0
+    if connections is not None:
+        n_branches = (getattr(connections, "BranchCount", None) or
+                      getattr(connections, "PathCount", None))
+        if n_branches is None and hasattr(connections, "Branches"):
+            n_branches = len(connections.Branches)
+    debug.append("Processed {} branches".format(n_branches or 0))
 
 except Exception as e:
     debug.append("Error: {}".format(str(e)))
@@ -285,6 +300,12 @@ ghenv.Component.Message = "JsonReader v0.01"
 ok = False
 values = []
 error = ""
+
+# Input 0 = file_path, Input 1 = keys (SourceCount = Grasshopper API)
+if ghenv.Component.Params.Input[0].SourceCount == 0:
+    file_path = None
+if ghenv.Component.Params.Input[1].SourceCount == 0:
+    keys = []
 
 def read_json_file(path):
     """Read and parse JSON from file path"""
