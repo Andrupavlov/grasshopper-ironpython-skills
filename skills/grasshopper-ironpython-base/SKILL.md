@@ -76,8 +76,8 @@ def validate_input(data):
     pass
 
 # GRASSHOPPER ENTRY POINT
-# Input validation and default values
-if 'my_input' not in globals() or my_input is None:
+# Input validation: use SourceCount (Grasshopper API) to check if input is connected
+if ghenv.Component.Params.Input[0].SourceCount == 0:
     my_input = DEFAULT_VALUE
 
 try:
@@ -213,23 +213,42 @@ tree = gh.DataTree[System.Object]()  # mixed types
 
 ## Input Validation Patterns
 
-### Check if GH input exists
+**Recommended (Grasshopper API):** Use the component’s parameter object to see if an input has a connected wire. The Grasshopper API exposes **SourceCount** on each parameter: if it is 0, no wire is connected. This is the documented approach (see [checking for empty (null) input parameters](https://www.grasshopper3d.com/forum/topics/checking-for-empty-null-input-parameters), [GH_Param.SourceCount](https://mcneel.github.io/grasshopper-api-docs/api/grasshopper/html/P_Grasshopper_Kernel_GH_Param_1_SourceCount.htm)).
+
+### Check if input is connected (SourceCount)
 
 ```python
-if 'my_param' not in globals() or my_param is None:
+# By index (e.g. first input = 0)
+if ghenv.Component.Params.Input[0].SourceCount == 0:
+    my_param = DEFAULT_VALUE
+else:
+    my_param = my_param  # use injected value
+
+# Helper: get input index by parameter nickname (Script-Mode input name)
+def input_connected(nickname):
+    """True if the input with this nickname has at least one wire."""
+    for i in range(ghenv.Component.Params.Input.Count):
+        if ghenv.Component.Params.Input[i].NickName == nickname:
+            return ghenv.Component.Params.Input[i].SourceCount > 0
+    return False
+
+if not input_connected("my_param"):
     my_param = DEFAULT_VALUE
 ```
 
-### Safe boolean input
+### Safe boolean input (using API)
 
 ```python
-try:
-    reset_flag = bool(reset) if 'reset' in globals() and reset else False
-except:
-    reset_flag = False
+# Prefer: check by input index (e.g. reset = third input → index 2)
+reset_idx = 2  # match your component input order
+reset_flag = False
+if ghenv.Component.Params.Input[reset_idx].SourceCount > 0 and reset:
+    reset_flag = bool(reset)
 ```
 
-### NameError-safe input
+### NameError-safe input (fallback)
+
+In Script-Mode, when an input is not connected, the script engine may not inject that variable, so using the name causes **NameError**. The **SourceCount** check above does not rely on the variable existing. If you cannot use the API (e.g. you need to support very old setups), you can still guard with a try/except or a globals check (not documented by McNeel; community workaround):
 
 ```python
 try:
