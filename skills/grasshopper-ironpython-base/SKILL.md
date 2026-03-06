@@ -9,19 +9,19 @@ description: Write IronPython 2.7 scripts for Rhino Grasshopper components. Cove
 
 These will cause **runtime errors** — never use them:
 
-| Forbidden | Use instead |
-|---|---|
-| `f"text {var}"` | `"text {}".format(var)` or `"text %s" % var` |
-| `:=` (walrus) | separate assignment |
-| Type hints `def fn(x: int) -> str:` | `def fn(x):` with docstring |
-| `pathlib` | `os.path` |
-| `dataclasses` | plain `class Foo(object):` |
-| `enum.Enum` | module-level constants |
-| `dict / list comprehension` with walrus | standard comprehension |
-| `yield from` | explicit loop with `yield` |
-| `nonlocal` | mutable container workaround |
-| `super()` without args | `super(ClassName, self)` |
-| `{**d1, **d2}` dict merge | `d = dict(d1); d.update(d2)` |
+| Forbidden                               | Use instead                                  |
+| --------------------------------------- | -------------------------------------------- |
+| `f"text {var}"`                         | `"text {}".format(var)` or `"text %s" % var` |
+| `:=` (walrus)                           | separate assignment                          |
+| Type hints `def fn(x: int) -> str:`     | `def fn(x):` with docstring                  |
+| `pathlib`                               | `os.path`                                    |
+| `dataclasses`                           | plain `class Foo(object):`                   |
+| `enum.Enum`                             | module-level constants                       |
+| `dict / list comprehension` with walrus | standard comprehension                       |
+| `yield from`                            | explicit loop with `yield`                   |
+| `nonlocal`                              | mutable container workaround                 |
+| `super()` without args                  | `super(ClassName, self)`                     |
+| `{**d1, **d2}` dict merge               | `d = dict(d1); d.update(d2)`                 |
 
 Additional notes:
 - `print()` works but is **not** for primary output — use GH output params
@@ -125,6 +125,8 @@ import os, math, re                  # standard lib
 ```
 
 ## DataTree Operations
+
+**API note:** In some Grasshopper/IronPython builds, `DataTree` exposes **BranchCount**, **Branch(i)**, **Path(i)** (official SDK); in others, **PathCount**, **Paths**, **Branches**. If you get `'DataTree[object]' object has no attribute 'PathCount'`, use `BranchCount` and `Branch(i)`/`Path(i)` instead, or use defensive checks: `getattr(tree, "BranchCount", None) or getattr(tree, "PathCount", None)` and similarly for path/branch access.
 
 Two import styles are used in the project (both valid):
 

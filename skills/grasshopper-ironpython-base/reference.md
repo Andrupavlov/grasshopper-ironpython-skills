@@ -1,328 +1,317 @@
-# Grasshopper IronPython — API Reference
+# Grasshopper IronPython — Component Templates
 
-## Rhino.Geometry (rg) Common Operations
+## Template 1: Simple Data Processor
 
-### Points
+Minimal component that takes input, processes it, outputs result.
 
 ```python
+"""
+GH Python (IronPython)
+Description: Process input data and produce output.
+
+Inputs:
+    data_in  : List[str] — input data items
+    enabled  : bool      — enable processing (default: True)
+
+Outputs:
+    result   : List[str] — processed results
+    count    : int       — number of items processed
+    ok       : bool      — success flag
+"""
+
 import Rhino.Geometry as rg
 
-pt = rg.Point3d(x, y, z)
-pt2 = rg.Point3d(pt)  # copy
-dist = pt.DistanceTo(pt2)
+ghenv.Component.Message = "DataProcessor v0.01"
 
-# Midpoint
-mid = rg.Point3d(
-    (pt.X + pt2.X) / 2,
-    (pt.Y + pt2.Y) / 2,
-    (pt.Z + pt2.Z) / 2
-)
+ok = False
+result = []
+count = 0
 
-# Move point
-moved = rg.Point3d(pt.X + dx, pt.Y + dy, pt.Z + dz)
+if 'enabled' not in globals() or enabled is None:
+    enabled = True
+
+try:
+    if not data_in:
+        result = []
+        count = 0
+    else:
+        for item in data_in:
+            processed = str(item).strip()
+            if processed:
+                result.append(processed)
+        count = len(result)
+    ok = True
+except Exception as e:
+    ok = False
+    print("Error: {}".format(str(e)))
 ```
 
-### Vectors
+## Template 2: Geometry Processor with DataTree Output
+
+Component that works with geometry and produces DataTree output.
 
 ```python
-vec = rg.Vector3d(x, y, z)
-vec = rg.Vector3d(pt2 - pt)  # from point to point
-vec.Unitize()  # normalize in-place, returns bool
-length = vec.Length
-dot = vec * vec2  # dot product
-cross = rg.Vector3d.CrossProduct(vec, vec2)
+"""
+GH Python (IronPython)
+Description: Group points by proximity and output as DataTree.
 
-# Standard axes
-rg.Vector3d.XAxis  # (1,0,0)
-rg.Vector3d.YAxis  # (0,1,0)
-rg.Vector3d.ZAxis  # (0,0,1)
-```
+Inputs:
+    points    : List[Point3d] — input points
+    tolerance : float         — grouping tolerance (default: 1.0)
 
-### Lines and Curves
+Outputs:
+    groups     : DataTree[Point3d] — grouped points
+    centroids  : List[Point3d]     — centroid of each group
+    debug      : List[str]         — debug messages
+"""
 
-```python
-line = rg.Line(pt_start, pt_end)
-line.Length
-line.PointAt(0.5)  # midpoint (t from 0 to 1)
-line.ClosestPoint(pt, limitToFiniteSegment=True)
-line.From  # start point
-line.To    # end point
-line.Direction  # vector from→to (not unitized)
-
-# LineCurve (curve wrapper for Line)
-lc = rg.LineCurve(pt_start, pt_end)
-lc.PointAtStart
-lc.PointAtEnd
-
-# Line-line intersection
-success, t1, t2 = rg.Intersect.Intersection.LineLine(line1, line2)
-```
-
-### Polylines
-
-```python
-pts = [rg.Point3d(0,0,0), rg.Point3d(1,0,0), rg.Point3d(1,1,0)]
-polyline = rg.Polyline(pts)
-polyline.Count        # number of points
-polyline[0]           # first point
-polyline.Length       # total length
-polyline.IsClosed
-
-# From PolylineCurve
-plc = rg.PolylineCurve(pts)
-pl = rg.Polyline()
-success = plc.TryGetPolyline(pl)
-```
-
-### Planes
-
-```python
-plane = rg.Plane(origin_pt, normal_vec)
-plane = rg.Plane(origin_pt, x_axis_vec, y_axis_vec)
-plane = rg.Plane.WorldXY
-
-plane.Origin     # rg.Point3d
-plane.Normal     # rg.Vector3d
-plane.XAxis
-plane.YAxis
-```
-
-### Rectangles
-
-```python
-rect = rg.Rectangle3d(plane, width, height)
-rect = rg.Rectangle3d(plane, corner1_pt, corner2_pt)
-rect.Center
-rect.Plane
-rect.Width
-rect.Height
-rect.BoundingBox
-crv = rect.ToNurbsCurve()  # for extrusion etc.
-```
-
-### BoundingBox
-
-```python
-bbox = rg.BoundingBox(min_pt, max_pt)
-bbox = geom.GetBoundingBox(True)  # accurate=True
-bbox.Min  # rg.Point3d
-bbox.Max  # rg.Point3d
-bbox.Center
-bbox.IsValid
-bbox = rg.BoundingBox.Union(bbox1, bbox2)
-```
-
-### Transformations
-
-```python
-xform = rg.Transform.Translation(vec)
-xform = rg.Transform.Rotation(angle_rad, axis_vec, center_pt)
-xform = rg.Transform.Scale(center_pt, factor)
-xform = rg.Transform.PlaneToPlane(source_plane, target_plane)
-
-# Apply to geometry (returns new object for immutable types)
-new_pt = rg.Point3d(pt)
-new_pt.Transform(xform)
-
-crv_copy = crv.DuplicateCurve()
-crv_copy.Transform(xform)
-```
-
-### Brep Operations
-
-```python
-extr = rg.Extrusion.Create(profile_curve, height, cap=True)
-brep = extr.ToBrep()
-
-# Boolean operations
-result = rg.Brep.CreateBooleanUnion(breps_list, tolerance)
-result = rg.Brep.CreateBooleanDifference(brep_a, brep_b, tolerance)
-result = rg.Brep.CreateBooleanIntersection(brep_a, brep_b, tolerance)
-```
-
-### Intersections
-
-```python
-import Rhino.Geometry.Intersect as ix
-
-# Curve-Curve
-events = ix.Intersection.CurveCurve(crv1, crv2, tolerance, overlap_tol)
-for ev in events:
-    pt = ev.PointA
-    t1 = ev.ParameterA
-    t2 = ev.ParameterB
-
-# Curve-Brep
-success, pts, crv_overlaps = ix.Intersection.CurveBrep(crv, brep, tolerance)
-
-# Line-Line
-success, t1, t2 = ix.Intersection.LineLine(line1, line2)
-```
-
-## Grasshopper-Specific
-
-### DataTree with typed .NET generics
-
-Two import styles (both valid, first matches CodeStyleGuide):
-
-```python
-# Style 1 — via gh alias (CodeStyleGuide)
+import Rhino.Geometry as rg
 import Grasshopper as gh
 import System
-tree = gh.DataTree[System.Object]()
-path = gh.Kernel.Data.GH_Path(0)
 
-# Style 2 — direct import (common in project)
-from Grasshopper import DataTree
-from Grasshopper.Kernel.Data import GH_Path
-tree = DataTree[object]()
-path = GH_Path(0)
+ghenv.Component.Message = "PointGrouper v0.01"
+
+DEFAULT_TOLERANCE = 1.0
+
+groups = gh.DataTree[rg.Point3d]()
+centroids = []
+debug = []
+
+if 'tolerance' not in globals() or tolerance is None:
+    tolerance = DEFAULT_TOLERANCE
+
+def find_group(point, group_centers, tol):
+    """Find which group a point belongs to, or -1 if none"""
+    for i, center in enumerate(group_centers):
+        if point.DistanceTo(center) <= tol:
+            return i
+    return -1
+
+def compute_centroid(pts):
+    """Compute centroid of point list"""
+    if not pts:
+        return rg.Point3d.Origin
+    sx, sy, sz = 0.0, 0.0, 0.0
+    for p in pts:
+        sx += p.X
+        sy += p.Y
+        sz += p.Z
+    n = float(len(pts))
+    return rg.Point3d(sx / n, sy / n, sz / n)
+
+try:
+    if not points:
+        debug.append("No input points")
+    else:
+        group_lists = []
+        group_centers = []
+
+        for pt in points:
+            idx = find_group(pt, group_centers, tolerance)
+            if idx == -1:
+                group_lists.append([pt])
+                group_centers.append(pt)
+            else:
+                group_lists[idx].append(pt)
+                group_centers[idx] = compute_centroid(group_lists[idx])
+
+        for i, grp in enumerate(group_lists):
+            path = gh.Kernel.Data.GH_Path(i)
+            groups.AddRange(grp, path)
+            centroids.append(group_centers[i])
+
+        debug.append("Found {} groups from {} points".format(
+            len(group_lists), len(points)))
+
+except Exception as e:
+    debug.append("Error: {}".format(str(e)))
 ```
 
-```python
-# Create typed trees
-tree = gh.DataTree[System.Object]()
-tree = gh.DataTree[str]()
-tree = gh.DataTree[float]()
-tree = gh.DataTree[rg.Point3d]()
+## Template 3: Stateful Component with sc.sticky
 
-# Add items
-path = gh.Kernel.Data.GH_Path(0)        # single index: {0}
-path = gh.Kernel.Data.GH_Path(0, 1)     # nested: {0;1}
-tree.Add(item, path)
-tree.AddRange(list_items, path)  # preferred for adding lists
-
-# Ensure branch exists (even if empty)
-tree.EnsurePath(gh.Kernel.Data.GH_Path(5))
-
-# Read
-for branch in tree.Branches:
-    for item in branch:
-        pass
-
-# Path info
-tree.PathCount   # number of branches
-tree.Paths       # list of GH_Path
-branch = tree.Branch(path)  # items in branch
-```
-
-### ghenv Component API
+Component that persists data between Grasshopper recalculations.
 
 ```python
-# Component message (version label)
-ghenv.Component.Message = "MyComp v0.01"
+"""
+GH Python (IronPython)
+Description: Accumulate values across multiple runs using sc.sticky.
 
-# Component GUID (unique per instance)
-guid = str(ghenv.Component.InstanceGuid)
+Inputs:
+    value : str  — value to store
+    key   : str  — storage key
+    reset : bool — clear stored data
 
-# Runtime messages
-import Grasshopper.Kernel as ghk
-ghenv.Component.AddRuntimeMessage(
-    ghk.GH_RuntimeMessageLevel.Warning, "msg"
-)
-ghenv.Component.AddRuntimeMessage(
-    ghk.GH_RuntimeMessageLevel.Error, "msg"
-)
+Outputs:
+    stored : List[str] — all stored values
+    count  : int       — number of stored values
+"""
 
-# Input/Output descriptions (set programmatically)
-ghenv.Component.Params.Input[0].Description = "Input param description"
-ghenv.Component.Params.Output[0].Description = "Output param description"
-
-# Force recompute
-ghenv.Component.ExpireSolution(True)
-```
-
-### sc.sticky (persistent state between runs)
-
-```python
 import scriptcontext as sc
 
-KEY = "my_key_" + str(ghenv.Component.InstanceGuid)
+ghenv.Component.Message = "Accumulator v0.01"
 
-# Store
-sc.sticky[KEY] = data
+comp_guid = str(ghenv.Component.InstanceGuid)
+STICKY_PREFIX = "accumulator_"
 
-# Read safely
-data = sc.sticky.get(KEY, default_value)
+stored = []
+count = 0
 
-# Check existence
-if KEY in sc.sticky:
-    pass
+def get_sticky_key(user_key):
+    """Build unique sticky key from user key and component GUID"""
+    return "{0}{1}_{2}".format(STICKY_PREFIX, user_key or "default", comp_guid)
 
-# Delete
-if KEY in sc.sticky:
-    del sc.sticky[KEY]
+try:
+    k = get_sticky_key(key)
+    reset_flag = reset if 'reset' in dir() and reset else False
+
+    if reset_flag:
+        sc.sticky[k] = []
+
+    current = sc.sticky.get(k, [])
+
+    if value is not None and str(value).strip():
+        current.append(str(value).strip())
+        sc.sticky[k] = current
+
+    stored = list(current)
+    count = len(stored)
+
+except Exception as e:
+    print("Error: {}".format(str(e)))
 ```
 
-## .NET Interop
+## Template 4: Class-Based Component
 
-### System types
+Complex component using classes for organization (follows project style).
 
 ```python
+"""
+GH Python (IronPython)
+Description: Process connections between panels across floors.
+
+Inputs:
+    connections : DataTree[str] — connection data per floor
+    panels      : List[str]    — panel identifiers
+
+Outputs:
+    result      : DataTree[str] — processed connections
+    debug       : List[str]     — debug info
+"""
+
+import Rhino.Geometry as rg
+import Grasshopper as gh
 import System
 
-# Check for .NET string
-isinstance(val, (str, System.String))
+ghenv.Component.Message = "ConnectionProcessor v0.01"
 
-# .NET list
-net_list = System.Collections.Generic.List[System.Object]()
-net_list.Add(item)
+TOLERANCE = 0.01
 
-# Guid
-guid = System.Guid.NewGuid()
+
+class ConnectionProcessor(object):
+    """Process and validate panel connections"""
+
+    def __init__(self, panels):
+        self.panels = panels or []
+        self.debug = []
+
+    def validate_panel(self, panel_id):
+        """Check if panel ID exists in panel list"""
+        return panel_id in self.panels
+
+    def process_branch(self, branch_items):
+        """Process single branch of connection data"""
+        results = []
+        for item in branch_items:
+            s = str(item).strip()
+            if not s:
+                continue
+            if self.validate_panel(s):
+                results.append(s)
+            else:
+                self.debug.append("Unknown panel: {}".format(s))
+        return results
+
+
+result = gh.DataTree[str]()
+debug = []
+
+try:
+    processor = ConnectionProcessor(panels)
+
+    if connections is not None and hasattr(connections, 'Branches'):
+        for i, branch in enumerate(connections.Branches):
+            path = gh.Kernel.Data.GH_Path(i)
+            processed = processor.process_branch(branch)
+            result.AddRange(processed, path)
+
+    debug = processor.debug
+    n_branches = (getattr(connections, "BranchCount", None) or
+                  getattr(connections, "PathCount", None) or
+                  (len(connections.Branches) if hasattr(connections, "Branches") else 0))
+    debug.append("Processed {} branches".format(n_branches))
+
+except Exception as e:
+    debug.append("Error: {}".format(str(e)))
 ```
 
-### File I/O with System.IO
+## Template 5: JSON File I/O Component
+
+Component that reads/writes JSON files (common in this project).
 
 ```python
-import System.IO as SIO
+"""
+GH Python (IronPython)
+Description: Read JSON file and extract specific keys.
 
-temp_dir = SIO.Path.GetTempPath()
-full_path = SIO.Path.Combine(dir_path, filename)
-SIO.Path.GetExtension(path)
-SIO.Path.GetFileNameWithoutExtension(path)
-```
+Inputs:
+    file_path : str       — path to JSON file
+    keys      : List[str] — keys to extract (empty = all)
 
-### JSON handling
+Outputs:
+    values : List[str] — extracted values as JSON strings
+    ok     : bool      — success flag
+    error  : str       — error message if failed
+"""
 
-```python
 import json
+import os
 
-# Read from file
-with open(path, 'rb') as f:
-    data = json.loads(f.read().decode('utf-8'))
+ghenv.Component.Message = "JsonReader v0.01"
 
-# Write to file
-s = json.dumps(data, ensure_ascii=False, indent=2)
-with open(path, 'wb') as f:
-    f.write(s.encode('utf-8'))
+ok = False
+values = []
+error = ""
 
-# Loose parsing (handle Python-style booleans)
-import re
-def parse_json_loose(s):
-    try:
-        return json.loads(s)
-    except:
-        s2 = s.replace("'", '"')
-        s2 = re.sub(r"\bNone\b", "null", s2)
-        s2 = re.sub(r"\bTrue\b", "true", s2)
-        s2 = re.sub(r"\bFalse\b", "false", s2)
-        return json.loads(s2)
-```
+def read_json_file(path):
+    """Read and parse JSON from file path"""
+    if not os.path.exists(path):
+        raise Exception("File not found: {}".format(path))
+    if not os.path.isabs(path):
+        raise Exception("Path must be absolute: {}".format(path))
+    with open(path, 'rb') as f:
+        raw = f.read()
+    return json.loads(raw.decode('utf-8'))
 
-## Geometry Type Checking
+try:
+    if not file_path or not str(file_path).strip():
+        error = "No file path provided"
+    else:
+        data = read_json_file(str(file_path).strip())
 
-```python
-def extract_endpoints(geom):
-    """Extract start/end points from any line-like geometry"""
-    if isinstance(geom, rg.Line):
-        return (geom.From, geom.To)
-    elif isinstance(geom, rg.LineCurve):
-        return (geom.PointAtStart, geom.PointAtEnd)
-    elif isinstance(geom, rg.PolylineCurve):
-        return (geom.PointAtStart, geom.PointAtEnd)
-    elif isinstance(geom, rg.Curve):
-        if not geom.IsClosed:
-            return (geom.PointAtStart, geom.PointAtEnd)
-    return None
+        if keys and len(keys) > 0:
+            for k in keys:
+                k_str = str(k).strip()
+                if k_str in data:
+                    val = data[k_str]
+                    values.append(json.dumps(val, ensure_ascii=False))
+                else:
+                    values.append("")
+        else:
+            values.append(json.dumps(data, ensure_ascii=False, indent=2))
+
+        ok = True
+
+except Exception as e:
+    ok = False
+    error = str(e)
 ```
