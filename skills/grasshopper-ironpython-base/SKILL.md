@@ -122,7 +122,16 @@ import os, math, re                  # standard lib
 
 ## DataTree Operations
 
-**API note:** In some Grasshopper/IronPython builds, `DataTree` exposes **BranchCount**, **Branch(i)**, **Path(i)** (official SDK); in others, **PathCount**, **Paths**, **Branches**. If you get `'DataTree[object]' object has no attribute 'PathCount'`, use `BranchCount` and `Branch(i)`/`Path(i)` instead, or use defensive checks: `getattr(tree, "BranchCount", None) or getattr(tree, "PathCount", None)` and similarly for path/branch access.
+**API note:** The official Grasshopper SDK exposes **BranchCount**, **Branch(i)**, **Path(i)**, **Branches** (list of branches), and **Paths** (list of GH_Path) on `DataTree<T>`. **`PathCount` is not a standard property** — always prefer `BranchCount`. When writing defensive code, use `hasattr` checks rather than `or`-chaining (which treats a count of 0 as falsy):
+
+```python
+if hasattr(tree, "BranchCount"):
+    n = tree.BranchCount
+elif hasattr(tree, "Branches"):
+    n = len(tree.Branches)
+else:
+    n = 0
+```
 
 Two import styles are used in the project (both valid):
 
