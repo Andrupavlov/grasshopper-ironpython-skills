@@ -207,6 +207,21 @@ tree = gh.DataTree[rg.Brep]()
 tree = gh.DataTree[System.Object]()  # mixed types
 ```
 
+### Iterate by Paths and use EnsurePath (output trees)
+
+When the tree has **Paths** and **Branch(path)**, you can iterate by path and keep the same path structure in output trees. Use **EnsurePath(path)** so the output tree has the branch before adding items:
+
+```python
+# Input tree with .Paths and .Branch(path) API
+for path in input_tree.Paths:
+    branch = input_tree.Branch(path)
+    out_tree.EnsurePath(path)   # create branch in output if missing
+    for item in branch:
+        out_tree.Add(processed(item), path)
+```
+
+Use this when you need path identity (e.g. one output branch per input branch). When only **Branches** is available, use `for i, branch in enumerate(tree.Branches)` and `GH_Path(i)` for outputs.
+
 **Optional:** If you need a default when an input is not wired, use `ghenv.Component.Params.Input[i].SourceCount == 0` ([GH API](https://mcneel.github.io/grasshopper-api-docs/api/grasshopper/html/P_Grasshopper_Kernel_GH_Param_1_SourceCount.htm)).
 
 ## sc.sticky State Persistence
