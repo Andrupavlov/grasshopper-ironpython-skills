@@ -205,8 +205,8 @@ def tree_to_list_of_lists(data_tree):
 
 ```python
 tree = gh.DataTree[rg.Point3d]()
-tree = gh.DataTree[str]()
-tree = gh.DataTree[float]()
+tree = gh.DataTree[System.String]()
+tree = gh.DataTree[System.Double]()
 tree = gh.DataTree[rg.Brep]()
 tree = gh.DataTree[System.Object]()  # mixed types
 ```
@@ -224,7 +224,7 @@ if 'my_param' not in globals() or my_param is None:
 
 ```python
 try:
-    reset_flag = bool(reset) if 'reset' in dir() and reset else False
+    reset_flag = bool(reset) if 'reset' in globals() and reset else False
 except:
     reset_flag = False
 ```

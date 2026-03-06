@@ -1,317 +1,479 @@
-# Grasshopper IronPython — Component Templates
+# Rhino.Geometry API Reference & .NET Interop
 
-## Template 1: Simple Data Processor
-
-Minimal component that takes input, processes it, outputs result.
+## Imports
 
 ```python
-"""
-GH Python (IronPython)
-Description: Process input data and produce output.
-
-Inputs:
-    data_in  : List[str] — input data items
-    enabled  : bool      — enable processing (default: True)
-
-Outputs:
-    result   : List[str] — processed results
-    count    : int       — number of items processed
-    ok       : bool      — success flag
-"""
-
 import Rhino.Geometry as rg
-
-ghenv.Component.Message = "DataProcessor v0.01"
-
-ok = False
-result = []
-count = 0
-
-if 'enabled' not in globals() or enabled is None:
-    enabled = True
-
-try:
-    if not data_in:
-        result = []
-        count = 0
-    else:
-        for item in data_in:
-            processed = str(item).strip()
-            if processed:
-                result.append(processed)
-        count = len(result)
-    ok = True
-except Exception as e:
-    ok = False
-    print("Error: {}".format(str(e)))
-```
-
-## Template 2: Geometry Processor with DataTree Output
-
-Component that works with geometry and produces DataTree output.
-
-```python
-"""
-GH Python (IronPython)
-Description: Group points by proximity and output as DataTree.
-
-Inputs:
-    points    : List[Point3d] — input points
-    tolerance : float         — grouping tolerance (default: 1.0)
-
-Outputs:
-    groups     : DataTree[Point3d] — grouped points
-    centroids  : List[Point3d]     — centroid of each group
-    debug      : List[str]         — debug messages
-"""
-
-import Rhino.Geometry as rg
-import Grasshopper as gh
+import Rhino
 import System
-
-ghenv.Component.Message = "PointGrouper v0.01"
-
-DEFAULT_TOLERANCE = 1.0
-
-groups = gh.DataTree[rg.Point3d]()
-centroids = []
-debug = []
-
-if 'tolerance' not in globals() or tolerance is None:
-    tolerance = DEFAULT_TOLERANCE
-
-def find_group(point, group_centers, tol):
-    """Find which group a point belongs to, or -1 if none"""
-    for i, center in enumerate(group_centers):
-        if point.DistanceTo(center) <= tol:
-            return i
-    return -1
-
-def compute_centroid(pts):
-    """Compute centroid of point list"""
-    if not pts:
-        return rg.Point3d.Origin
-    sx, sy, sz = 0.0, 0.0, 0.0
-    for p in pts:
-        sx += p.X
-        sy += p.Y
-        sz += p.Z
-    n = float(len(pts))
-    return rg.Point3d(sx / n, sy / n, sz / n)
-
-try:
-    if not points:
-        debug.append("No input points")
-    else:
-        group_lists = []
-        group_centers = []
-
-        for pt in points:
-            idx = find_group(pt, group_centers, tolerance)
-            if idx == -1:
-                group_lists.append([pt])
-                group_centers.append(pt)
-            else:
-                group_lists[idx].append(pt)
-                group_centers[idx] = compute_centroid(group_lists[idx])
-
-        for i, grp in enumerate(group_lists):
-            path = gh.Kernel.Data.GH_Path(i)
-            groups.AddRange(grp, path)
-            centroids.append(group_centers[i])
-
-        debug.append("Found {} groups from {} points".format(
-            len(group_lists), len(points)))
-
-except Exception as e:
-    debug.append("Error: {}".format(str(e)))
+import System.Drawing as sd
+import System.Collections.Generic as scg
 ```
 
-## Template 3: Stateful Component with sc.sticky
+## Point3d, Vector3d, Plane
 
-Component that persists data between Grasshopper recalculations.
+### Point3d
 
 ```python
-"""
-GH Python (IronPython)
-Description: Accumulate values across multiple runs using sc.sticky.
+pt = rg.Point3d(1.0, 2.0, 3.0)
+pt2 = rg.Point3d(pt)                   # copy
+origin = rg.Point3d.Origin              # (0, 0, 0)
+unset = rg.Point3d.Unset               # invalid sentinel
 
-Inputs:
-    value : str  — value to store
-    key   : str  — storage key
-    reset : bool — clear stored data
+x, y, z = pt.X, pt.Y, pt.Z
+dist = pt.DistanceTo(pt2)
+pt.Transform(xform)                     # in-place transform
 
-Outputs:
-    stored : List[str] — all stored values
-    count  : int       — number of stored values
-"""
-
-import scriptcontext as sc
-
-ghenv.Component.Message = "Accumulator v0.01"
-
-comp_guid = str(ghenv.Component.InstanceGuid)
-STICKY_PREFIX = "accumulator_"
-
-stored = []
-count = 0
-
-def get_sticky_key(user_key):
-    """Build unique sticky key from user key and component GUID"""
-    return "{0}{1}_{2}".format(STICKY_PREFIX, user_key or "default", comp_guid)
-
-try:
-    k = get_sticky_key(key)
-    reset_flag = reset if 'reset' in dir() and reset else False
-
-    if reset_flag:
-        sc.sticky[k] = []
-
-    current = sc.sticky.get(k, [])
-
-    if value is not None and str(value).strip():
-        current.append(str(value).strip())
-        sc.sticky[k] = current
-
-    stored = list(current)
-    count = len(stored)
-
-except Exception as e:
-    print("Error: {}".format(str(e)))
+mid = (pt + pt2) / 2.0                  # midpoint via operator overloads
+vec = pt2 - pt                          # Point3d - Point3d → Vector3d
+moved = pt + vec                        # Point3d + Vector3d → Point3d
 ```
 
-## Template 4: Class-Based Component
-
-Complex component using classes for organization (follows project style).
+### Vector3d
 
 ```python
-"""
-GH Python (IronPython)
-Description: Process connections between panels across floors.
+v = rg.Vector3d(1.0, 0.0, 0.0)
+v2 = rg.Vector3d(pt2 - pt)             # from two points
 
-Inputs:
-    connections : DataTree[str] — connection data per floor
-    panels      : List[str]    — panel identifiers
+length = v.Length
+v.Unitize()                             # normalize in-place (returns bool)
+rev = rg.Vector3d(-v.X, -v.Y, -v.Z)    # reverse
+rev = -v                                # reverse via operator
 
-Outputs:
-    result      : DataTree[str] — processed connections
-    debug       : List[str]     — debug info
-"""
+dot = v * v2                            # dot product (operator *)
+cross = rg.Vector3d.CrossProduct(v, v2)
+angle = rg.Vector3d.VectorAngle(v, v2)  # radians
 
-import Rhino.Geometry as rg
-import Grasshopper as gh
+rg.Vector3d.XAxis   # (1, 0, 0)
+rg.Vector3d.YAxis   # (0, 1, 0)
+rg.Vector3d.ZAxis   # (0, 0, 1)
+```
+
+### Plane
+
+```python
+pl = rg.Plane.WorldXY
+pl = rg.Plane(origin_pt, normal_vec)
+pl = rg.Plane(origin_pt, x_vec, y_vec)
+pl = rg.Plane(pt_a, pt_b, pt_c)        # from 3 points
+
+o = pl.Origin
+n = pl.Normal
+xdir, ydir = pl.XAxis, pl.YAxis
+
+closest = pl.ClosestPoint(pt)           # returns Point3d
+rc, u, v = pl.ClosestParameter(pt)      # rc=bool, u/v=float (UV coords)
+dist = pl.DistanceTo(pt)                # signed distance
+```
+
+## Lines, Polylines, Arcs, Circles
+
+### Line
+
+```python
+ln = rg.Line(pt_a, pt_b)
+ln = rg.Line(pt_a, direction_vec, length)
+
+start, end = ln.From, ln.To
+mid = ln.PointAt(0.5)                   # parameter 0..1
+length = ln.Length
+ln_crv = ln.ToNurbsCurve()              # Line → NurbsCurve
+closest = ln.ClosestPoint(pt, True)     # limitToFiniteSegment=True
+```
+
+### Polyline
+
+```python
+pts = [rg.Point3d(i, 0, 0) for i in range(5)]
+pline = rg.Polyline(pts)
+pline_crv = pline.ToNurbsCurve()        # Polyline → NurbsCurve
+pline_crv = pline.ToPolylineCurve()     # Polyline → PolylineCurve
+
+length = pline.Length
+count = pline.Count                     # number of vertices
+pt = pline[2]                           # access vertex by index
+pline.Add(rg.Point3d(5, 0, 0))         # append vertex
+is_closed = pline.IsClosed
+```
+
+### Arc & Circle
+
+```python
+arc = rg.Arc(center_pt, radius, angle_radians)
+arc = rg.Arc(pt_a, pt_b, pt_c)         # 3-point arc
+arc_crv = arc.ToNurbsCurve()
+
+circle = rg.Circle(plane, radius)
+circle = rg.Circle(pt_a, pt_b, pt_c)   # 3-point circle
+circle_crv = circle.ToNurbsCurve()
+circumference = circle.Circumference
+center = circle.Center
+```
+
+## Curves (NurbsCurve, PolyCurve, general Curve)
+
+All concrete curve types inherit from `rg.Curve` — use `rg.Curve` methods on any curve.
+
+### Evaluation
+
+```python
+pt = crv.PointAtStart
+pt = crv.PointAtEnd
+pt = crv.PointAt(t)                     # parameter t
+pt = crv.PointAtNormalizedLength(0.5)   # 0..1 along length
+
+tangent = crv.TangentAt(t)
+rc, plane = crv.FrameAt(t)             # rc=bool, plane with origin at t
+
+length = crv.GetLength()
+domain = crv.Domain                     # Interval(t0, t1)
+t_mid = crv.Domain.Mid
+```
+
+### Closest point & parameters
+
+```python
+rc, t = crv.ClosestPoint(pt)           # rc=bool, t=parameter
+closest_pt = crv.PointAt(t)
+dist = pt.DistanceTo(closest_pt)
+
+rc, t = crv.NormalizedLengthParameter(0.5)  # length fraction → param
+```
+
+### Splitting, trimming, joining
+
+```python
+segments = crv.Split(t)                 # returns array of Curve at param t
+
+trimmed = crv.Trim(t0, t1)             # sub-curve between params
+
+joined = rg.Curve.JoinCurves(curve_list)           # returns array
+joined = rg.Curve.JoinCurves(curve_list, tolerance) # with tolerance
+```
+
+### Offsets & fillets
+
+```python
+offsets = crv.Offset(
+    plane,          # offset plane
+    distance,       # positive = left, negative = right
+    tolerance,
+    rg.CurveOffsetCornerStyle.Sharp
+)
+
+fillets = rg.Curve.CreateFilletCurves(
+    crv_a, crv_a_pt,    # curve A and point near fillet
+    crv_b, crv_b_pt,    # curve B and point near fillet
+    radius,
+    True, True,          # join, trim
+    True, True,          # arcExtension for A, B
+    tolerance, tolerance
+)
+```
+
+### Booleans & intersections
+
+```python
+events = rg.Intersect.Intersection.CurveCurve(
+    crv_a, crv_b, tolerance, overlap_tolerance
+)
+for ev in events:
+    if ev.IsPoint:
+        pt = ev.PointA
+        t_a, t_b = ev.ParameterA, ev.ParameterB
+    elif ev.IsOverlap:
+        overlap_crv = ev.OverlapA
+```
+
+### NurbsCurve construction
+
+```python
+nc = rg.NurbsCurve.CreateControlPointCurve(pts, degree)
+
+nc = rg.NurbsCurve(degree, point_count)
+for i, pt in enumerate(pts):
+    nc.Points.SetPoint(i, pt)
+```
+
+### Curve type checks
+
+```python
+if isinstance(crv, rg.LineCurve):
+    line = crv.Line
+elif isinstance(crv, rg.ArcCurve):
+    arc = crv.Arc
+elif isinstance(crv, rg.PolylineCurve):
+    pline = crv.TryGetPolyline()       # returns (bool, Polyline)
+```
+
+## Surfaces & Breps
+
+### Surface evaluation
+
+```python
+u_dom = srf.Domain(0)                  # U domain (Interval)
+v_dom = srf.Domain(1)                  # V domain
+
+pt = srf.PointAt(u, v)
+normal = srf.NormalAt(u, v)
+rc, u, v = srf.ClosestPoint(pt)
+
+rc, frame = srf.FrameAt(u, v)         # rc=bool, frame=Plane
+```
+
+### Surface creation
+
+```python
+srf = rg.NurbsSurface.CreateFromCorners(pt_a, pt_b, pt_c, pt_d)
+
+loft = rg.Brep.CreateFromLoft(
+    curves,                # IEnumerable<Curve>
+    rg.Point3d.Unset,     # start point (or Unset)
+    rg.Point3d.Unset,     # end point (or Unset)
+    rg.LoftType.Normal,
+    False                  # closed loft
+)
+
+extrusion = rg.Extrusion.Create(
+    profile_crv,           # planar closed curve
+    height,
+    cap                    # bool — cap ends
+)
+```
+
+### Brep operations
+
+```python
+brep = crv.Extrude(direction_vec).ToBrep()
+brep.Faces.ShrinkFaces()
+
+area = rg.AreaMassProperties.Compute(brep)
+if area:
+    a = area.Area
+    centroid = area.Centroid
+
+vol = rg.VolumeMassProperties.Compute(brep)
+if vol:
+    v = vol.Volume
+    centroid = vol.Centroid
+
+bbox = brep.GetBoundingBox(True)       # True = accurate
+min_pt, max_pt = bbox.Min, bbox.Max
+```
+
+### Brep booleans
+
+```python
+results = rg.Brep.CreateBooleanUnion(brep_list, tolerance)
+results = rg.Brep.CreateBooleanDifference(brep_a, brep_b, tolerance)
+results = rg.Brep.CreateBooleanIntersection(brep_a, brep_b, tolerance)
+```
+
+### Brep topology traversal
+
+```python
+for face in brep.Faces:
+    srf = face.UnderlyingSurface()
+    area = rg.AreaMassProperties.Compute(face)
+
+for edge in brep.Edges:
+    crv = edge.EdgeCurve
+    length = crv.GetLength()
+
+for vertex in brep.Vertices:
+    pt = vertex.Location
+```
+
+## Meshes
+
+### Creation
+
+```python
+mesh = rg.Mesh()
+mesh.Vertices.Add(0, 0, 0)
+mesh.Vertices.Add(1, 0, 0)
+mesh.Vertices.Add(1, 1, 0)
+mesh.Vertices.Add(0, 1, 0)
+mesh.Faces.AddFace(0, 1, 2, 3)         # quad face (4 indices)
+mesh.Faces.AddFace(0, 1, 2)            # tri face (3 indices)
+mesh.Normals.ComputeNormals()
+mesh.Compact()
+```
+
+### Brep → Mesh
+
+```python
+mp = rg.MeshingParameters.Default      # or .Coarse, .Fine, .QualityRenderMesh
+meshes = rg.Mesh.CreateFromBrep(brep, mp)
+if meshes:
+    joined = rg.Mesh()
+    for m in meshes:
+        joined.Append(m)
+```
+
+### Mesh queries
+
+```python
+count_v = mesh.Vertices.Count
+count_f = mesh.Faces.Count
+pt = mesh.Vertices[i]                  # Point3f
+face = mesh.Faces[i]                   # MeshFace → .A, .B, .C, .D
+
+bbox = mesh.GetBoundingBox(True)
+area = rg.AreaMassProperties.Compute(mesh)
+mesh_pt = mesh.ClosestMeshPoint(pt, 0.0)  # returns MeshPoint
+```
+
+## Transformations
+
+All geometry with `.Transform(xform)` method. Transformations are `rg.Transform` matrices.
+
+```python
+move = rg.Transform.Translation(rg.Vector3d(dx, dy, dz))
+move = rg.Transform.Translation(dx, dy, dz)
+
+scale_uniform = rg.Transform.Scale(center_pt, factor)
+scale_xyz = rg.Transform.Scale(plane, sx, sy, sz)
+
+rot = rg.Transform.Rotation(angle_radians, axis_vec, center_pt)
+
+mirror = rg.Transform.Mirror(plane)
+
+p2p = rg.Transform.PlaneToPlane(source_plane, target_plane)
+
+proj = rg.Transform.PlanarProjection(plane)
+```
+
+### Applying transforms
+
+```python
+geom_copy = geom.Duplicate()
+geom_copy.Transform(xform)
+
+combined = rg.Transform.Multiply(xform_b, xform_a)  # b applied after a
+```
+
+## Intersections (Rhino.Geometry.Intersect)
+
+```python
+from Rhino.Geometry.Intersect import Intersection
+
+rc, t = Intersection.LinePlane(line, plane)
+
+rc, pt = Intersection.LineLine(line_a, line_b)
+
+rc, line = Intersection.PlanePlane(plane_a, plane_b)
+
+rc, circle = Intersection.PlanePlanePlane(pl_a, pl_b, pl_c)
+
+rc, events = Intersection.CurveSurface(crv, srf, tol, overlap_tol)
+
+rc, pts, crvs = Intersection.BrepBrep(brep_a, brep_b, tolerance)
+
+events = Intersection.CurveCurve(crv_a, crv_b, tol, overlap_tol)
+
+pts, indices = Intersection.MeshMeshFast(mesh_a, mesh_b)
+```
+
+## BoundingBox
+
+```python
+bbox = geom.GetBoundingBox(True)       # accurate
+bbox = geom.GetBoundingBox(plane)      # oriented to plane
+
+min_pt = bbox.Min                      # Point3d
+max_pt = bbox.Max                      # Point3d
+center = bbox.Center
+is_valid = bbox.IsValid
+
+contains = bbox.Contains(pt)           # bool
+bbox.Union(other_bbox)                 # expand to include other
+```
+
+## Interval (parameter domains)
+
+```python
+iv = rg.Interval(0.0, 1.0)
+iv = crv.Domain
+
+t0, t1 = iv.T0, iv.T1
+mid = iv.Mid
+length = iv.Length
+iv.Reverse()
+
+t_norm = iv.NormalizedParameterAt(t)   # map t → 0..1
+t_real = iv.ParameterAt(0.5)           # map 0..1 → actual param
+```
+
+## .NET Interop Patterns
+
+### System.Drawing.Color
+
+```python
+import System.Drawing as sd
+
+color = sd.Color.FromArgb(255, 128, 0)       # RGB
+color = sd.Color.FromArgb(200, 255, 128, 0)  # ARGB with alpha
+color = sd.Color.Red                          # named color
+
+r, g, b, a = color.R, color.G, color.B, color.A
+```
+
+### .NET collections ↔ Python
+
+```python
 import System
+import System.Collections.Generic as scg
 
-ghenv.Component.Message = "ConnectionProcessor v0.01"
+net_list = scg.List[rg.Point3d]()
+net_list.Add(pt)
+net_list.AddRange(python_list)         # bulk add
 
-TOLERANCE = 0.01
+python_list = list(net_list)           # .NET list → Python list
 
-
-class ConnectionProcessor(object):
-    """Process and validate panel connections"""
-
-    def __init__(self, panels):
-        self.panels = panels or []
-        self.debug = []
-
-    def validate_panel(self, panel_id):
-        """Check if panel ID exists in panel list"""
-        return panel_id in self.panels
-
-    def process_branch(self, branch_items):
-        """Process single branch of connection data"""
-        results = []
-        for item in branch_items:
-            s = str(item).strip()
-            if not s:
-                continue
-            if self.validate_panel(s):
-                results.append(s)
-            else:
-                self.debug.append("Unknown panel: {}".format(s))
-        return results
-
-
-result = gh.DataTree[str]()
-debug = []
-
-try:
-    processor = ConnectionProcessor(panels)
-
-    if connections is not None and hasattr(connections, 'Branches'):
-        for i, branch in enumerate(connections.Branches):
-            path = gh.Kernel.Data.GH_Path(i)
-            processed = processor.process_branch(branch)
-            result.AddRange(processed, path)
-
-    debug = processor.debug
-    n_branches = (getattr(connections, "BranchCount", None) or
-                  getattr(connections, "PathCount", None) or
-                  (len(connections.Branches) if hasattr(connections, "Branches") else 0))
-    debug.append("Processed {} branches".format(n_branches))
-
-except Exception as e:
-    debug.append("Error: {}".format(str(e)))
+net_array = System.Array[rg.Point3d](python_list)
+python_list = list(net_array)          # .NET array → Python list
 ```
 
-## Template 5: JSON File I/O Component
-
-Component that reads/writes JSON files (common in this project).
+### Type casting in GH context
 
 ```python
-"""
-GH Python (IronPython)
-Description: Read JSON file and extract specific keys.
+import Rhino
 
-Inputs:
-    file_path : str       — path to JSON file
-    keys      : List[str] — keys to extract (empty = all)
-
-Outputs:
-    values : List[str] — extracted values as JSON strings
-    ok     : bool      — success flag
-    error  : str       — error message if failed
-"""
-
-import json
-import os
-
-ghenv.Component.Message = "JsonReader v0.01"
-
-ok = False
-values = []
-error = ""
-
-def read_json_file(path):
-    """Read and parse JSON from file path"""
-    if not os.path.exists(path):
-        raise Exception("File not found: {}".format(path))
-    if not os.path.isabs(path):
-        raise Exception("Path must be absolute: {}".format(path))
-    with open(path, 'rb') as f:
-        raw = f.read()
-    return json.loads(raw.decode('utf-8'))
-
-try:
-    if not file_path or not str(file_path).strip():
-        error = "No file path provided"
-    else:
-        data = read_json_file(str(file_path).strip())
-
-        if keys and len(keys) > 0:
-            for k in keys:
-                k_str = str(k).strip()
-                if k_str in data:
-                    val = data[k_str]
-                    values.append(json.dumps(val, ensure_ascii=False))
-                else:
-                    values.append("")
-        else:
-            values.append(json.dumps(data, ensure_ascii=False, indent=2))
-
-        ok = True
-
-except Exception as e:
-    ok = False
-    error = str(e)
+guid = System.Guid(guid_string)
+obj_ref = Rhino.DocObjects.ObjRef(guid)
+rh_obj = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(guid)
+geom = rh_obj.Geometry
 ```
+
+### System.Enum flags
+
+```python
+import System
+style = System.Enum.Parse(
+    rg.CurveOffsetCornerStyle,
+    "Sharp"
+)
+```
+
+## Tolerance & Document Settings
+
+```python
+import Rhino
+
+tol = Rhino.RhinoDoc.ActiveDoc.ModelAbsoluteTolerance   # typically 0.001 or 0.01
+angle_tol = Rhino.RhinoDoc.ActiveDoc.ModelAngleToleranceRadians
+units = Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem         # e.g. UnitSystem.Millimeters
+```
+
+## Common Pitfalls
+
+| Pitfall | Correct approach |
+|---------|-----------------|
+| `rg.Point3d` is a value type — assignment copies | Use `rg.Point3d(pt)` when you need an explicit copy |
+| `Curve.ClosestPoint` returns `(bool, float)` | Always check `rc` before using the parameter `t` |
+| `Brep.CreateBoolean*` may return `None` | Always check result for `None` before iterating |
+| `Mesh.Vertices[i]` returns `Point3f`, not `Point3d` | Cast: `rg.Point3d(mesh.Vertices[i])` |
+| `Transform` modifies geometry in-place | Call `.Duplicate()` first if you need the original |
+| `NurbsCurve.CreateControlPointCurve` degree > len(pts)-1 | Ensure `degree <= len(pts) - 1` |
+| `Extrusion.Create` requires planar closed profile | Validate with `crv.IsClosed` and `crv.IsPlanar()` |

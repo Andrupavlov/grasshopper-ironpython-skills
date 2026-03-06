@@ -19,8 +19,6 @@ Outputs:
     ok       : bool      — success flag
 """
 
-import Rhino.Geometry as rg
-
 ghenv.Component.Message = "DataProcessor v0.01"
 
 ok = False
@@ -29,6 +27,8 @@ count = 0
 
 if 'enabled' not in globals() or enabled is None:
     enabled = True
+if 'data_in' not in globals() or data_in is None:
+    data_in = []
 
 try:
     if not data_in:
@@ -156,13 +156,18 @@ STICKY_PREFIX = "accumulator_"
 stored = []
 count = 0
 
+if 'key' not in globals() or key is None:
+    key = "default"
+if 'value' not in globals():
+    value = None
+
 def get_sticky_key(user_key):
     """Build unique sticky key from user key and component GUID"""
     return "{0}{1}_{2}".format(STICKY_PREFIX, user_key or "default", comp_guid)
 
 try:
     k = get_sticky_key(key)
-    reset_flag = reset if 'reset' in dir() and reset else False
+    reset_flag = bool(reset) if 'reset' in globals() and reset else False
 
     if reset_flag:
         sc.sticky[k] = []
@@ -232,7 +237,7 @@ class ConnectionProcessor(object):
         return results
 
 
-result = gh.DataTree[str]()
+result = gh.DataTree[System.String]()
 debug = []
 
 try:
@@ -245,8 +250,9 @@ try:
             result.AddRange(processed, path)
 
     debug = processor.debug
-    debug.append("Processed {} branches".format(
-        connections.PathCount if connections else 0))
+    n_branches = (getattr(connections, "BranchCount", None)
+                  if connections is not None else 0) or 0
+    debug.append("Processed {} branches".format(n_branches))
 
 except Exception as e:
     debug.append("Error: {}".format(str(e)))
@@ -282,10 +288,10 @@ error = ""
 
 def read_json_file(path):
     """Read and parse JSON from file path"""
-    if not os.path.exists(path):
-        raise Exception("File not found: {}".format(path))
     if not os.path.isabs(path):
         raise Exception("Path must be absolute: {}".format(path))
+    if not os.path.exists(path):
+        raise Exception("File not found: {}".format(path))
     with open(path, 'rb') as f:
         raw = f.read()
     return json.loads(raw.decode('utf-8'))
