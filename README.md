@@ -88,6 +88,26 @@ git sparse-checkout set skills/grasshopper-ironpython-base
 git checkout
 ```
 
+### Option 5 — skills CLI
+
+Initialize skills support in your project (creates a `skills.json` config):
+
+```bash
+npx skills init
+```
+
+Then add this collection:
+
+```bash
+npx skills add Andrupavlov/grasshopper-ironpython-skills
+```
+
+To update all installed skills later:
+
+```bash
+npx skills update
+```
+
 ## License
 
 MIT
