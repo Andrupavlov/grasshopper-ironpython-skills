@@ -95,11 +95,12 @@ try:
     if not points:
         debug.append("No input points")
     else:
+        tol = tolerance if tolerance is not None else DEFAULT_TOLERANCE
         group_lists = []
         group_centers = []
 
         for pt in points:
-            idx = find_group(pt, group_centers, tolerance)
+            idx = find_group(pt, group_centers, tol)
             if idx == -1:
                 group_lists.append([pt])
                 group_centers.append(pt)
@@ -239,11 +240,11 @@ try:
     debug = processor.debug
     n_branches = 0
     if connections is not None:
-        n_branches = (getattr(connections, "BranchCount", None) or
-                      getattr(connections, "PathCount", None))
-        if n_branches is None and hasattr(connections, "Branches"):
+        if hasattr(connections, "BranchCount"):
+            n_branches = connections.BranchCount
+        elif hasattr(connections, "Branches"):
             n_branches = len(connections.Branches)
-    debug.append("Processed {} branches".format(n_branches or 0))
+    debug.append("Processed {} branches".format(n_branches))
 
 except Exception as e:
     debug.append("Error: {}".format(str(e)))

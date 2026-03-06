@@ -165,9 +165,11 @@ fillets = rg.Curve.CreateFilletCurves(
     crv_a, crv_a_pt,    # curve A and point near fillet
     crv_b, crv_b_pt,    # curve B and point near fillet
     radius,
-    True, True,          # join, trim
-    True, True,          # arcExtension for A, B
-    tolerance, tolerance
+    True,               # join
+    True,               # trim
+    True,               # arcExtension
+    tolerance,          # tolerance
+    tolerance           # angleTolerance
 )
 ```
 
@@ -360,19 +362,20 @@ from Rhino.Geometry.Intersect import Intersection
 
 rc, t = Intersection.LinePlane(line, plane)
 
-rc, pt = Intersection.LineLine(line_a, line_b)
+rc, a, b = Intersection.LineLine(line_a, line_b)   # a=param on line_a, b=param on line_b
+# closest point on line_a: line_a.PointAt(a)
 
 rc, line = Intersection.PlanePlane(plane_a, plane_b)
 
-rc, circle = Intersection.PlanePlanePlane(pl_a, pl_b, pl_c)
+rc, pt = Intersection.PlanePlanePlane(pl_a, pl_b, pl_c)   # intersection Point3d
 
-rc, events = Intersection.CurveSurface(crv, srf, tol, overlap_tol)
+events = Intersection.CurveSurface(crv, srf, tol, overlap_tol)   # returns CurveIntersections
 
-rc, pts, crvs = Intersection.BrepBrep(brep_a, brep_b, tolerance)
+rc, crvs, pts = Intersection.BrepBrep(brep_a, brep_b, tolerance)   # crvs=Curve[], pts=Point3d[]
 
 events = Intersection.CurveCurve(crv_a, crv_b, tol, overlap_tol)
 
-pts, indices = Intersection.MeshMeshFast(mesh_a, mesh_b)
+pts = Intersection.MeshMeshFast(mesh_a, mesh_b)   # returns Point3d[] of intersection points
 ```
 
 ## BoundingBox
@@ -387,7 +390,7 @@ center = bbox.Center
 is_valid = bbox.IsValid
 
 contains = bbox.Contains(pt)           # bool
-bbox.Union(other_bbox)                 # expand to include other
+bbox = rg.BoundingBox.Union(bbox, other_bbox)   # expand to include other (static; BoundingBox is a struct)
 ```
 
 ## Interval (parameter domains)
